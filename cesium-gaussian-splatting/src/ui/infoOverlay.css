@@ -1,0 +1,20 @@
+#parcel-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  max-width: 320px;
+  background: rgba(17,17,17,0.75);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  padding: 12px 14px;
+  border-radius: 12px;
+  font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  box-shadow: 0 6px 22px rgba(0,0,0,.35);
+  display: none;
+}
+#parcel-overlay h4 { margin: 0 0 6px 0; font-size: 16px; }
+#parcel-overlay .muted { opacity: .75; }
+#parcel-overlay .pill {
+  display: inline-block; margin: 6px 6px 0 0; padding: 2px 8px; border-radius: 10px;
+  background: #7f1d1d; color: #ffdcdc;
+}

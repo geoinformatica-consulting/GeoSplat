@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cesium Gaussian Splatting - Burbank</title>
+  <link rel="stylesheet" href="/public/css/app.css">
+  <style>
+    #controls-legend {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      z-index: 1000;
+      max-width: 300px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    #controls-legend h3 {
+      margin: 0 0 10px 0;
+      font-size: 16px;
+      color: #4CAF50;
+      border-bottom: 1px solid #4CAF50;
+      padding-bottom: 5px;
+    }
+
+    #controls-legend .control-group {
+      margin-bottom: 10px;
+    }
+
+    #controls-legend .control-group-title {
+      color: #FFA500;
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+
+    #controls-legend .control-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+    }
+
+    #controls-legend .key {
+      color: #2196F3;
+      font-weight: bold;
+      min-width: 80px;
+    }
+
+    #controls-legend .action {
+      color: #ddd;
+      text-align: right;
+    }
+
+    #toggle-legend {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 1001;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      border: 1px solid #4CAF50;
+      display: none;
+    }
+
+    #toggle-legend:hover {
+      background: rgba(0, 0, 0, 0.95);
+      border-color: #66BB6A;
+    }
+  </style>
+</head>
+<body>
+  <div id="three"></div>
+  <div id="cesium"></div>
+
+  <!-- Parcel Info Overlay -->
+  <div id="parcel-overlay"></div>
+
+  <!-- Toggle button (hidden by default) -->
+  <button id="toggle-legend">Show Controls [H]</button>
+
+  <!-- Controls Legend -->
+  <div id="controls-legend">
+    <h3>📊 Splat Controls</h3>
+
+    <div class="control-group">
+      <div class="control-group-title">Scale</div>
+      <div class="control-item">
+        <span class="key">M</span>
+        <span class="action">Increase</span>
+      </div>
+      <div class="control-item">
+        <span class="key">N</span>
+        <span class="action">Decrease</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-group-title">Rotation</div>
+      <div class="control-item">
+        <span class="key">Q</span>
+        <span class="action">Rotate Y+</span>
+      </div>
+      <div class="control-item">
+        <span class="key">W</span>
+        <span class="action">Rotate Y-</span>
+      </div>
+      <div class="control-item">
+        <span class="key">A</span>
+        <span class="action">Rotate X+</span>
+      </div>
+      <div class="control-item">
+        <span class="key">S</span>
+        <span class="action">Rotate X-</span>
+      </div>
+      <div class="control-item">
+        <span class="key">Z</span>
+        <span class="action">Rotate Z+</span>
+      </div>
+      <div class="control-item">
+        <span class="key">X</span>
+        <span class="action">Rotate Z-</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-group-title">Position</div>
+      <div class="control-item">
+        <span class="key">Y</span>
+        <span class="action">North</span>
+      </div>
+      <div class="control-item">
+        <span class="key">H</span>
+        <span class="action">South</span>
+      </div>
+      <div class="control-item">
+        <span class="key">J</span>
+        <span class="action">East</span>
+      </div>
+      <div class="control-item">
+        <span class="key">G</span>
+        <span class="action">West</span>
+      </div>
+      <div class="control-item">
+        <span class="key">O</span>
+        <span class="action">Up</span>
+      </div>
+      <div class="control-item">
+        <span class="key">L</span>
+        <span class="action">Down</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-group-title">Save Position</div>
+      <div class="control-item">
+        <span class="key">P</span>
+        <span class="action">Print Code</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-group-title">QC Mode</div>
+      <div class="control-item">
+        <span class="key">T</span>
+        <span class="action">Toggle QC Panel</span>
+      </div>
+      <div class="control-item">
+        <span class="key">1</span>
+        <span class="action">Pick Truth Point</span>
+      </div>
+      <div class="control-item">
+        <span class="key">2</span>
+        <span class="action">Pick Splat Point</span>
+      </div>
+      <div class="control-item">
+        <span class="key">E</span>
+        <span class="action">Export CSV</span>
+      </div>
+      <div class="control-item">
+        <span class="key">C</span>
+        <span class="action">Clear Pairs</span>
+      </div>
+      <div class="control-item">
+        <span class="key">V</span>
+        <span class="action">Toggle Vectors</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+  <script>
+    // Toggle legend with H key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'h' || e.key === 'H') {
+        const legend = document.getElementById('controls-legend');
+        const toggleBtn = document.getElementById('toggle-legend');
+
+        if (legend.style.display === 'none') {
+          legend.style.display = 'block';
+          toggleBtn.style.display = 'none';
+        } else {
+          legend.style.display = 'none';
+          toggleBtn.style.display = 'block';
+        }
+      }
+    });
+
+    // Click toggle button
+    document.getElementById('toggle-legend').addEventListener('click', () => {
+      const legend = document.getElementById('controls-legend');
+      const toggleBtn = document.getElementById('toggle-legend');
+      legend.style.display = 'block';
+      toggleBtn.style.display = 'none';
+    });
+  </script>
+</body>
+</html>

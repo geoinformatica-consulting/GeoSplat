@@ -1,0 +1,62 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-118.28557075, 34.18941967],
+          [-118.28457075, 34.18941967],
+          [-118.28457075, 34.19041967],
+          [-118.28557075, 34.19041967],
+          [-118.28557075, 34.18941967]
+        ]]
+      },
+      "properties": {
+        "parcelId": "TEST-001",
+        "address": "123 Test St, Burbank, CA 91502",
+        "owner": "Test Owner LLC",
+        "ordinances": ["Zoning-Commercial", "Historic District"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-118.28657075, 34.18941967],
+          [-118.28557075, 34.18941967],
+          [-118.28557075, 34.19041967],
+          [-118.28657075, 34.19041967],
+          [-118.28657075, 34.18941967]
+        ]]
+      },
+      "properties": {
+        "parcelId": "TEST-002",
+        "address": "456 Demo Ave, Burbank, CA 91502",
+        "owner": "Demo Properties Inc",
+        "ordinances": ["Zoning-Residential"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-118.28457075, 34.18941967],
+          [-118.28357075, 34.18941967],
+          [-118.28357075, 34.19041967],
+          [-118.28457075, 34.19041967],
+          [-118.28457075, 34.18941967]
+        ]]
+      },
+      "properties": {
+        "parcelId": "TEST-003",
+        "address": "789 Sample Rd, Burbank, CA 91502",
+        "owner": "Sample Realty Corp",
+        "ordinances": ["Zoning-Mixed-Use", "Parking-Required"]
+      }
+    }
+  ]
+}

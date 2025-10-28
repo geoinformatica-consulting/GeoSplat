@@ -1,0 +1,24 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type":"Feature",
+      "properties":{
+        "parcelId":"LHH-123-456",
+        "owner":"Smith Family Trust",
+        "address":"123 Foothill Ln",
+        "ordinances":["DS-5FT","DS-30FT"]
+      },
+      "geometry":{
+        "type":"Polygon",
+        "coordinates":[[
+          [-118.28750,34.19050],
+          [-118.28730,34.19050],
+          [-118.28730,34.19070],
+          [-118.28750,34.19070],
+          [-118.28750,34.19050]
+        ]]
+      }
+    }
+  ]
+}

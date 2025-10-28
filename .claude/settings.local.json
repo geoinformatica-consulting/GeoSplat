@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Read(//w/Work/Missions/Multispec/Thurber(Burbank)/Oblique/**)",
+      "Read(//w/Work/Missions/Multispec/Thurber(Burbank)/ObliqueOrganize/RGB/**)",
+      "Bash(exiftool:*)",
+      "Bash(python:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(npm run dev:*)",
+      "WebSearch",
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(dir)",
+      "Bash(dir:*)",
+      "Bash(npm i:*)",
+      "Bash(npm run:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(del nul)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
