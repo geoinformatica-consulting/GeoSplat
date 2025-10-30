@@ -18,7 +18,7 @@ export class Viewer {
     });
   }
 
-  private createViewer() {
+  private async createViewer() {
     // Set Cesium Ion token FIRST before creating viewer
     Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_ION_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJhY2QxODIxMy05YTg2LTQ1NWQtODE0NC1kMWRiZWUwYjgyY2UiLCJpZCI6MzE2Nzg3LCJpYXQiOjE3NTkwODAzMzJ9.uN7tc0tUNOVkYaD8sP8pWcwGPgBbliqvLktW-SBlgVU';
 
@@ -49,21 +49,29 @@ export class Viewer {
     this.cesium.scene.fxaa = true;
     this.cesium.scene.requestRenderMode = false;
 
-    this.addBaseLayer();
+    await this.addBaseLayer();
     this.addBuildingsLayer();
 
     console.log('✅ 3D Viewer initialized with terrain elevation');
   }
 
-  private addBaseLayer(): void {
-    // Use OpenStreetMap via Vite proxy with zoom capped at 19
-    // This avoids CORS issues and rate limiting from excessive zoom levels
-    const osmProvider = new Cesium.OpenStreetMapImageryProvider({
-      url: '/osm/',  // Proxied through Vite to add proper headers
-      maximumLevel: 19  // Cap at zoom level 19 to avoid 20/21 failures
-    });
-    this.cesium.imageryLayers.addImageryProvider(osmProvider);
-    console.log('✅ OpenStreetMap imagery loaded (via proxy, max zoom: 19)');
+  private async addBaseLayer(): Promise<void> {
+    try {
+      // Use Cesium Ion's Bing Maps imagery (high-quality aerial imagery)
+      // Asset ID 2 = Bing Maps Aerial with Labels
+      const bingImagery = await Cesium.IonImageryProvider.fromAssetId(2);
+      this.cesium.imageryLayers.addImageryProvider(bingImagery);
+      console.log('✅ Bing Maps aerial imagery loaded (high-resolution via Cesium Ion)');
+    } catch (error) {
+      console.warn('Failed to load Bing imagery, falling back to OSM:', error);
+      // Fallback to OSM if Ion imagery fails
+      const osmProvider = new Cesium.OpenStreetMapImageryProvider({
+        url: '/osm/',
+        maximumLevel: 19
+      });
+      this.cesium.imageryLayers.addImageryProvider(osmProvider);
+      console.log('✅ OpenStreetMap imagery loaded (fallback)');
+    }
   }
 
   /**
@@ -83,27 +91,27 @@ export class Viewer {
   }
 
   /**
-   * Switch back to OSM imagery
+   * Switch to OSM imagery (lower detail than Esri)
    */
   public setOSMImagery(): void {
     const layers = this.cesium.imageryLayers;
     layers.removeAll();
-    this.addBaseLayer();
+
+    const osmProvider = new Cesium.OpenStreetMapImageryProvider({
+      url: '/osm/',
+      maximumLevel: 19
+    });
+    layers.addImageryProvider(osmProvider);
+    console.log('🗺️ Switched to OpenStreetMap imagery');
   }
 
   /**
-   * Add Esri World Imagery as fallback
+   * Switch to Bing Maps aerial imagery (high-resolution, default)
    */
-  public setEsriImagery(): void {
+  public async setEsriImagery(): Promise<void> {
     const layers = this.cesium.imageryLayers;
     layers.removeAll();
-
-    const esriProvider = new Cesium.ArcGisMapServerImageryProvider({
-      url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
-    });
-
-    layers.addImageryProvider(esriProvider);
-    console.log('🌍 Switched to Esri World Imagery');
+    await this.addBaseLayer(); // Uses Bing Maps by default now
   }
 
   private async addBuildingsLayer(): Promise<void> {
@@ -118,7 +126,7 @@ export class Viewer {
   }
 
   private createOverlay() {
-    this.threeOverlay = new ThreeOverlay(this.cesium!.camera);
+    this.threeOverlay = new ThreeOverlay(this.cesium!.camera, this.cesium);
   }
 
   public flyTo(

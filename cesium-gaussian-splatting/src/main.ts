@@ -4,6 +4,7 @@ import { Viewer } from "./viewer";
 import { QCController } from "./alignment/qc/qcController";
 import { QCOverlay } from "./alignment/qc/qcOverlay";
 import { QCVectorVisualizer } from "./alignment/qc/qcVectorVisualizer";
+import { GCPValidationController } from "./alignment/gcpValidationController";
 import { loadParcels, findParcelAt } from "./geo/parcelService.js";
 import { DebugHUD } from "./ui/debugHUD";
 import "./ui/infoOverlay.css";
@@ -13,6 +14,7 @@ let splatLayer: GaussianSplatLayer;
 let qcController: QCController | null = null;
 let qcOverlay: QCOverlay | null = null;
 let qcVisualizer: QCVectorVisualizer | null = null;
+let gcpValidation: GCPValidationController | null = null;
 let debugHUD: DebugHUD;
 
 // Mode toggle: 'parcel' or 'qc'
@@ -23,14 +25,15 @@ let depthTestAgainstTerrain = true;
 let pickTranslucentDepth = true;
 
 // Starting values for tracking - PepperWood Preserve coordinates
+// Rotation values calibrated for proper alignment with terrain
 const INITIAL_VALUES = {
-  lon: -122.6895,
-  lat: 38.5701,
-  height: 400,
-  rotationX: 0,
-  rotationY: 0,
-  rotationZ: 0,
-  scale: 50.0
+  lon: -122.69248000,
+  lat: 38.57244750,
+  height: 413.00,
+  rotationX: -0.554940,
+  rotationY: 0.252155,
+  rotationZ: -0.559569,
+  scale: 98.450
 };
 
 async function loadPepperWoodScene() {
@@ -45,7 +48,8 @@ async function loadPepperWoodScene() {
     "./splats/myscene/PepperWoodPreFireRealityScanClean.ply",
     { lon: INITIAL_VALUES.lon, lat: INITIAL_VALUES.lat, height: INITIAL_VALUES.height },
     { x: INITIAL_VALUES.rotationX, y: INITIAL_VALUES.rotationY, z: INITIAL_VALUES.rotationZ },
-    INITIAL_VALUES.scale
+    INITIAL_VALUES.scale,
+    viewer.cesium  // Pass Cesium viewer for terrain height checks
   );
 
   viewer.addGaussianSplatLayer(splatLayer);
@@ -68,7 +72,7 @@ async function loadPepperWoodScene() {
   // Load parcels
   await loadParcels();
 
-  // Initialize QC system after splat is loaded
+  // Initialize QC and GCP systems after splat is loaded
   setTimeout(() => {
     if (splatLayer.scene) {
       const anchor = {
@@ -89,7 +93,11 @@ async function loadPepperWoodScene() {
         }
       };
 
+      // Initialize GCP Validation controller
+      gcpValidation = new GCPValidationController(viewer.cesium, splatLayer.scene);
+
       console.log('✅ QC system initialized (press T to toggle panel)');
+      console.log('✅ GCP Validation system initialized (press Shift+V to load CSV)');
     }
   }, 1000);
 }
@@ -220,16 +228,17 @@ document.addEventListener('keydown', (e) => {
     printFinalValues();
   }
 
-  // Press 'S' to save pose to manifest file
-  if (e.key === 's' || e.key === 'S') {
+  // Press 'Shift+S' to save pose to manifest file (Shift to avoid conflict with rotation)
+  if ((e.key === 'S' || e.key === 's') && e.shiftKey) {
     if (splatLayer) {
       console.log('💾 Saving current pose to manifest...');
       splatLayer.savePoseToFile('User-adjusted pose via keyboard');
+      e.preventDefault(); // Prevent the rotation from also firing
     }
   }
 
-  // Press 'G' to toggle between Parcel Identify and QC modes
-  if (e.key === 'g' || e.key === 'G') {
+  // Press ']' to toggle between Parcel Identify and QC modes
+  if (e.key === ']') {
     interactionMode = interactionMode === 'parcel' ? 'qc' : 'parcel';
     console.log(`🔄 Interaction mode: ${interactionMode.toUpperCase()}`);
     if (interactionMode === 'qc') {
@@ -237,6 +246,8 @@ document.addEventListener('keydown', (e) => {
     } else {
       console.log('📍 Parcel Mode: Click to identify parcels');
     }
+    e.preventDefault();
+    return; // Don't process other handlers
   }
 
   // Press 'R' to reset pose
@@ -251,6 +262,64 @@ document.addEventListener('keydown', (e) => {
   // Press 'F' to focus on splat
   if (e.key === 'f' || e.key === 'F') {
     focusSplat();
+  }
+
+  // Press 'Shift+L' to auto-level splat (Shift to avoid conflict with height adjustment)
+  if ((e.key === 'L' || e.key === 'l') && e.shiftKey) {
+    if (splatLayer) {
+      console.log('🔄 Auto-leveling splat...');
+      splatLayer.autoLevel();
+      e.preventDefault(); // Prevent the height adjustment from also firing
+    }
+  }
+
+  // GCP VALIDATION CONTROLS
+  // Press 'Shift+V' to load GCP CSV file
+  if ((e.key === 'V' || e.key === 'v') && e.shiftKey) {
+    if (gcpValidation) {
+      console.log('📂 Loading GCP CSV file for validation...');
+      gcpValidation.loadGCPFile()
+        .then(() => {
+          console.log('✅ GCP file loaded! Press B to start picking validation points');
+        })
+        .catch((error) => {
+          console.error('❌ Failed to load GCP file:', error);
+        });
+      e.preventDefault();
+    }
+  }
+
+  // Press 'B' to start picking next GCP validation point
+  if (e.key === 'b' || e.key === 'B') {
+    if (gcpValidation) {
+      gcpValidation.startPickingNextGCP();
+      e.preventDefault();
+    }
+  }
+
+  // Press 'Shift+E' to calculate and show validation errors
+  if ((e.key === 'E' || e.key === 'e') && e.shiftKey && !e.ctrlKey) {
+    if (gcpValidation) {
+      console.log('📊 Calculating validation errors...');
+      gcpValidation.calculateErrors();
+      e.preventDefault();
+    }
+  }
+
+  // Press 'Shift+X' to export validation results to CSV
+  if ((e.key === 'X' || e.key === 'x') && e.shiftKey) {
+    if (gcpValidation) {
+      gcpValidation.exportValidationCSV();
+      e.preventDefault();
+    }
+  }
+
+  // Press 'Shift+C' to clear validation pairs
+  if ((e.key === 'C' || e.key === 'c') && e.shiftKey && e.ctrlKey) {
+    if (gcpValidation && confirm('Clear all GCP validation pairs?')) {
+      gcpValidation.clearPairs();
+      e.preventDefault();
+    }
   }
 
   // Press 'O' to toggle depthTestAgainstTerrain
@@ -272,6 +341,20 @@ document.addEventListener('keydown', (e) => {
     console.log(`🔧 pickTranslucentDepth: ${pickTranslucentDepth ? 'ON' : 'OFF'}`);
   }
 
+  // Press 'K' to toggle terrain occlusion (hide splat when below terrain)
+  if (e.key === 'k' || e.key === 'K') {
+    if (splatLayer) {
+      splatLayer.hideWhenBelowTerrain = !splatLayer.hideWhenBelowTerrain;
+      console.log(`🌍 Terrain occlusion: ${splatLayer.hideWhenBelowTerrain ? 'ON (hides splat when below terrain)' : 'OFF (always visible)'}`);
+      // Trigger immediate check
+      if (splatLayer.hideWhenBelowTerrain) {
+        (splatLayer as any).updateVisibilityBasedOnTerrain();
+      } else {
+        splatLayer.scene.visible = true;
+      }
+    }
+  }
+
   // Press 'I' to cycle through imagery providers
   if (e.key === 'i' || e.key === 'I') {
     if (e.shiftKey) {
@@ -286,35 +369,48 @@ document.addEventListener('keydown', (e) => {
     }
   }
 
-  // QC controls (only if QC is initialized)
+  // QC controls (only active in QC mode or when panel is visible)
   if (qcController && qcOverlay) {
-    if (e.key === 't' || e.key === 'T') {
+    // 'T' key always available to toggle QC panel
+    if ((e.key === 't' || e.key === 'T') && !e.shiftKey && !e.ctrlKey) {
       console.log('🔑 Key pressed: T (toggle QC panel)');
       qcOverlay.toggle();
-    } else if (e.key === '1') {
-      console.log('🔑 Key pressed: 1 (pick truth point)');
-      qcController.pickTruthPoint();
-    } else if (e.key === '2') {
-      console.log('🔑 Key pressed: 2 (pick splat point)');
-      qcController.pickSplatPoint();
-    } else if (e.key === 'e' || e.key === 'E') {
-      console.log('🔑 Key pressed: E (export CSV)');
-      if (qcOverlay.isVisible()) {
-        qcController.downloadCSV();
-      } else {
-        console.log('⚠️ QC panel must be visible to export CSV');
-      }
-    } else if (e.key === 'c' || e.key === 'C') {
-      console.log('🔑 Key pressed: C (clear pairs)');
-      if (qcOverlay.isVisible() && confirm('Clear all QC pairs?')) {
-        qcController.clearPairs();
-      }
-    } else if (e.key === 'v' || e.key === 'V') {
-      console.log('🔑 Key pressed: V (toggle vectors)');
-      if (qcOverlay.isVisible()) {
-        qcController.toggleVectors();
-      } else {
-        console.log('⚠️ QC panel must be visible to toggle vectors');
+      e.preventDefault();
+      return; // Prevent other handlers
+    }
+
+    // Other QC controls only work when QC panel is visible OR in QC mode
+    if (qcOverlay.isVisible() || interactionMode === 'qc') {
+      if (e.key === '1') {
+        console.log('🔑 Key pressed: 1 (pick truth point)');
+        qcController.pickTruthPoint();
+        return;
+      } else if (e.key === '2') {
+        console.log('🔑 Key pressed: 2 (pick splat point)');
+        qcController.pickSplatPoint();
+        return;
+      } else if ((e.key === 'e' || e.key === 'E') && !e.shiftKey) {
+        console.log('🔑 Key pressed: E (export CSV)');
+        if (qcOverlay.isVisible()) {
+          qcController.downloadCSV();
+        } else {
+          console.log('⚠️ QC panel must be visible to export CSV');
+        }
+        return;
+      } else if ((e.key === 'c' || e.key === 'C') && !e.shiftKey && !e.ctrlKey) {
+        console.log('🔑 Key pressed: C (clear pairs)');
+        if (qcOverlay.isVisible() && confirm('Clear all QC pairs?')) {
+          qcController.clearPairs();
+        }
+        return;
+      } else if ((e.key === 'v' || e.key === 'V') && !e.shiftKey) {
+        console.log('🔑 Key pressed: V (toggle vectors)');
+        if (qcOverlay.isVisible()) {
+          qcController.toggleVectors();
+        } else {
+          console.log('⚠️ QC panel must be visible to toggle vectors');
+        }
+        return;
       }
     }
   }
@@ -323,19 +419,64 @@ document.addEventListener('keydown', (e) => {
 if (viewer.cesium) {
   loadPepperWoodScene();
 
-  console.log('💡 TIP: Adjust the splat using keyboard controls');
-  console.log('💡 Press P to print final values, S to save pose to manifest');
-  console.log('💡 Press R to reset pose, F to focus camera on splat');
-  console.log('💡 Press G to toggle Parcel/QC mode, D to toggle depth picking');
-  console.log('💡 Press I for blank imagery, Shift+I for Esri, Ctrl+I for OSM');
-  console.log('💡 Press Shift+O to toggle depth test against terrain');
+  console.log('');
+  console.log('🎮 KEYBOARD CONTROLS');
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('');
+  console.log('📍 SPLAT POSITION (always available):');
+  console.log('   Y/H - Move North/South (latitude)');
+  console.log('   J/G - Move East/West (longitude)');
+  console.log('   O/L - Move Up/Down (height)');
+  console.log('   Q/W - Rotate around Y axis (yaw)');
+  console.log('   A/S - Rotate around X axis (pitch)');
+  console.log('   Z/X - Rotate around Z axis (roll)');
+  console.log('   M/N - Scale increase/decrease');
+  console.log('');
+  console.log('💾 SPLAT MANAGEMENT:');
+  console.log('   P - Print final position values');
+  console.log('   Shift+S - Save pose to manifest file');
+  console.log('   R - Reset to initial pose');
+  console.log('   F - Focus camera on splat');
+  console.log('   Shift+L - Auto-level splat (may not work with all splats)');
+  console.log('');
+  console.log('🎯 QC MODE (press T to toggle panel, then use these):');
+  console.log('   T - Toggle QC panel');
+  console.log('   1 - Pick truth point (when QC panel open)');
+  console.log('   2 - Pick splat point (when QC panel open)');
+  console.log('   E - Export CSV (when QC panel open)');
+  console.log('   C - Clear pairs (when QC panel open)');
+  console.log('   V - Toggle vectors (when QC panel open)');
+  console.log('');
+  console.log('📊 GCP VALIDATION:');
+  console.log('   Shift+V - Load GCP CSV file');
+  console.log('   B - Start picking next GCP point in splat');
+  console.log('   Shift+E - Calculate and show validation errors');
+  console.log('   Shift+X - Export validation results to CSV');
+  console.log('   Ctrl+Shift+C - Clear all validation pairs');
+  console.log('');
+  console.log('🗺️  VIEWER SETTINGS:');
+  console.log('   ] - Toggle Parcel/QC interaction mode');
+  console.log('   I - Blank imagery');
+  console.log('   Shift+I - Bing aerial imagery (default)');
+  console.log('   Ctrl+I - OpenStreetMap imagery');
+  console.log('   D - Toggle depth picking');
+  console.log('   K - Toggle terrain occlusion (hide splat when below terrain)');
+  console.log('   Shift+O - Toggle depth test against terrain');
+  console.log('');
   console.log(`📍 Current mode: ${interactionMode.toUpperCase()}`);
-  console.log('ℹ️  Set localStorage.GEOSPLAT_BYPASS_POSE = "1" to skip pose loading');
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('');
 
   // Add click handler for QC point picking and parcel lookup (after scene is set up)
   const handler = new Cesium.ScreenSpaceEventHandler(viewer.cesium.scene.canvas);
 
   handler.setInputAction((movement: any) => {
+    // GCP Validation mode: handle GCP point picking (highest priority)
+    if (gcpValidation && gcpValidation.getMode() === 'picking') {
+      const consumed = gcpValidation.handleClick(movement.position);
+      if (consumed) return;
+    }
+
     // QC mode: handle QC point picking
     if (interactionMode === 'qc') {
       if (qcController && qcController.getMode() !== 'idle') {

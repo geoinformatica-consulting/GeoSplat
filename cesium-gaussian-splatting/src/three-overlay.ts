@@ -5,14 +5,16 @@ import { GaussianSplatLayer } from "./gaussian-splat-layer";
 
 export class ThreeOverlay {
   private cesiumCamera: Cesium.Camera;
+  private cesiumViewer?: Cesium.Viewer;
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
   private threeRenderer: THREE.WebGLRenderer;
   private gausssianSplatLayers: GaussianSplatLayer[];
 
-  constructor(cesiumCamera: Cesium.Camera) {
+  constructor(cesiumCamera: Cesium.Camera, cesiumViewer?: Cesium.Viewer) {
     const threeContainer = document.getElementById("three");
     this.cesiumCamera = cesiumCamera;
+    this.cesiumViewer = cesiumViewer;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(
       75,
@@ -83,7 +85,7 @@ export class ThreeOverlay {
     this.camera.up.copy(cameraUpVec3);
     this.camera.lookAt(cameraPositionVec3.clone().add(cameraDirectionVec3));
 
-    // Clear depth buffer before rendering
+    // Clear depth buffer before rendering THREE.js content
     this.threeRenderer.clear(false, true, false);
 
     this.gausssianSplatLayers.forEach((layer) => {

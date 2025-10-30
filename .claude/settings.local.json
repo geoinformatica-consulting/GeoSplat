@@ -21,7 +21,9 @@
       "Bash(npm run:*)",
       "Bash(git init:*)",
       "Bash(git remote add:*)",
-      "Bash(del nul)"
+      "Bash(del nul)",
+      "Bash(git push:*)",
+      "Read(//c/Users/rbloo/Downloads/**)"
     ],
     "deny": [],
     "ask": []
