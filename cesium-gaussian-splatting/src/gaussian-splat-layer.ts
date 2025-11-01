@@ -277,7 +277,7 @@ export class GaussianSplatLayer {
 
     this.splatViewer
       .addSplatScene(this.model, {
-        showLoadingUI: false,
+        showLoadingUI: true,
         progressiveLoad: false,
         rotation: [0, 0, 0],
         scale: [1, 1, 1],

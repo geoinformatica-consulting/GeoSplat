@@ -11,12 +11,12 @@ export class DebugHUD {
     this.hudElement.id = 'debug-hud';
     this.hudElement.style.cssText = `
       position: fixed;
-      bottom: 10px;
+      bottom: 30px;
       left: 10px;
       background: rgba(0, 0, 0, 0.75);
       color: #0f0;
       font-family: 'Courier New', monospace;
-      font-size: 11px;
+      font-size: 14px;
       padding: 8px 12px;
       border-radius: 4px;
       z-index: 9999;
