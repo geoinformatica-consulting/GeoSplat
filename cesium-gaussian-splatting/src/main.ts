@@ -9,6 +9,7 @@ import { loadParcels, findParcelAt } from "./geo/parcelService.js";
 import { DebugHUD } from "./ui/debugHUD";
 import "./ui/infoOverlay.css";
 import { degToRad } from "three/src/math/MathUtils.js";
+import { createInstructionsPopup } from "./instructions-ui"
 
 const viewer = new Viewer();
 let splatLayer: GaussianSplatLayer;
@@ -38,208 +39,15 @@ const INITIAL_VALUES = {
   scale: 98.450
 };
 
-function createInstructionsPopup() {
-  // Styles
-  const style = document.createElement("style");
-  style.textContent = `
-    .info-btn {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      z-index: 1200;
-      padding: 6px 10px;
-      font: 500 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: rgba(32,32,32,0.75);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 6px;
-      cursor: pointer;
-      backdrop-filter: blur(3px);
-      pointer-events: auto;
-    }
-    .info-btn:hover { background: rgba(32,32,32,0.9); }
-    .info-btn:active { transform: translateY(1px); }
-
-    .info-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.35);
-      z-index: 1199;
-      display: none;
-    }
-    .info-modal {
-      position: fixed;
-      top: 8%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(860px, calc(100vw - 32px));
-      max-height: 80vh;
-      overflow: auto;
-      background: #111;
-      color: #eee;
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 10px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
-      padding: 16px 18px 18px 18px;
-      z-index: 1201;
-      display: none;
-    }
-    .info-modal h3 {
-      margin: 0 0 8px 0;
-      font-size: 16px;
-      letter-spacing: 0.2px;
-    }
-    .info-modal .muted { color: #bbb; font-size: 12px; margin-bottom: 10px; }
-    .info-modal .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    .info-modal .section {
-      background: #151515;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 8px;
-      padding: 10px 12px;
-    }
-    .info-modal .section h4 {
-      margin: 0 0 6px 0;
-      font-size: 13px;
-      color: #ddd;
-    }
-    .info-modal ul {
-      margin: 0;
-      padding-left: 18px;
-      line-height: 1.45;
-      font-size: 12px;
-    }
-    .info-close {
-      position: absolute;
-      right: 12px;
-      top: 10px;
-      background: transparent;
-      color: #ccc;
-      border: 0;
-      font-size: 18px;
-      cursor: pointer;
-    }
-    .info-close:hover { color: #fff; }
-    @media (max-width: 860px) {
-      .info-modal .grid { grid-template-columns: 1fr; }
-    }
-  `;
-  document.head.appendChild(style);
-
-  // Button
-  const btn = document.createElement("button");
-  btn.className = "info-btn";
-  btn.type = "button";
-  btn.title = "Show instructions (Shift + /)";
-  btn.textContent = "Instructions";
-  document.body.appendChild(btn);
-
-  // Backdrop and modal
-  const backdrop = document.createElement("div");
-  backdrop.className = "info-backdrop";
-  document.body.appendChild(backdrop);
-
-  const modal = document.createElement("div");
-  modal.className = "info-modal";
-  modal.setAttribute("role", "dialog");
-  modal.setAttribute("aria-modal", "true");
-  modal.setAttribute("aria-label", "Viewer instructions");
-  modal.innerHTML = `
-    <button class="info-close" aria-label="Close">×</button>
-    <h3>Instructions</h3>
-    <div class="muted">Press Shift + / to toggle this window.</div>
-    <div class="grid">
-
-      <div class="section">
-        <h4>Navigation</h4>
-        <ul>
-          <li>Left drag to rotate, right drag to pan, mouse wheel to zoom</li>
-          <li>Home button returns to the default view</li>
-          <li>Use the + and - buttons for zoom steps</li>
-        </ul>
-      </div>
-
-      <div class="section">
-        <h4>Modes</h4>
-        <ul>
-          <li>] toggles Parcel mode and QC mode</li>
-          <li>Parcel mode: click map to identify parcels</li>
-          <li>QC mode: press T to open QC panel, then use 1 and 2 to pick points</li>
-        </ul>
-      </div>
-
-      <div class="section">
-        <h4>Splat positioning</h4>
-        <ul>
-          <li>Y or H adjust latitude, J or G adjust longitude</li>
-          <li>O or L adjust height</li>
-          <li>Q or W yaw, A or S pitch, Z or X roll</li>
-          <li>M or N scale up or down</li>
-          <li>P prints final values, Shift+S saves pose, R resets, F focuses</li>
-          <li>Shift+L attempts auto level</li>
-        </ul>
-      </div>
-
-      <div class="section">
-        <h4>GCP validation</h4>
-        <ul>
-          <li>Shift+V load GCP CSV</li>
-          <li>B pick next GCP point</li>
-          <li>Shift+E compute errors</li>
-          <li>Shift+X export CSV</li>
-          <li>Ctrl+Shift+C clear pairs</li>
-        </ul>
-      </div>
-
-      <div class="section">
-        <h4>Viewer settings</h4>
-        <ul>
-          <li>I blank imagery, Shift+I Esri World Imagery, Ctrl+I OpenStreetMap</li>
-          <li>D toggle translucent depth picking</li>
-          <li>K toggle terrain occlusion of splat</li>
-          <li>Shift+O toggle depth test against terrain</li>
-        </ul>
-      </div>
-
-      <div class="section">
-        <h4>Troubleshooting</h4>
-        <ul>
-          <li>If the splat is not visible, use F to focus it or R to reset pose</li>
-          <li>Keep index.html on top in the DOM so overlays receive input</li>
-        </ul>
-      </div>
-
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  const closeBtn = modal.querySelector<HTMLButtonElement>(".info-close")!;
-  const open = () => {
-    backdrop.style.display = "block";
-    modal.style.display = "block";
-    closeBtn.focus();
-  };
-  const close = () => {
-    modal.style.display = "none";
-    backdrop.style.display = "none";
-    btn.focus();
-  };
-  const toggle = () => (modal.style.display === "block" ? close() : open());
-
-  // Events
-  btn.addEventListener("click", toggle);
-  closeBtn.addEventListener("click", close);
-  backdrop.addEventListener("click", close);
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && modal.style.display === "block") { e.preventDefault(); close(); }
-  });
-
-  return { open, close, toggle, btn, modal };
-}
-
+// Add another event listener for opening the Instructions UI
+document.addEventListener("keydown", (e) => {
+  // Toggle Instructions with Shift + /
+  if ((e.key === "?" || (e.key === "/" && e.shiftKey)) && instructionsUI) {
+    instructionsUI.toggle();
+    e.preventDefault();
+    return;
+  }
+});
 
 // Instructions UI Element
 let instructionsUI: ReturnType<typeof createInstructionsPopup> | null = null;
@@ -254,8 +62,10 @@ async function loadPepperWoodScene() {
     // "./splats/myscene/PepperWoodPreFireRealityScanClean.ply",
     // "./splats/myscene/PepperWoodPreFireRealityScanClean_binary.ply", //BAD
     // "./splats/myscene/PepperWoodPostFireRealityScannedClean_binary.ply",
-    // "./splats/myscene/PepperWoodPostRealityScannedClean-compressed.ply",
+    // "./splats/myscene/PepperWoodPostFireRealityScannedClean_binary.ply",
+    // "./splats/myscene/PepperWoodPostRealityScannedClean.ply",
     "./splats/myscene/PepperWoodPostRealityScannedClean_compressed_pdal.ply",
+    // "./splats/myscene/PepperWoodPostRealityScannedClean_compressed_splat_transform_gt05.ply",
     { lon: INITIAL_VALUES.lon, lat: INITIAL_VALUES.lat, height: INITIAL_VALUES.height },
     { x: INITIAL_VALUES.rotationX, y: INITIAL_VALUES.rotationY, z: INITIAL_VALUES.rotationZ },
     INITIAL_VALUES.scale,
