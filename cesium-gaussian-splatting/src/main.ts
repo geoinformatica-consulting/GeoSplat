@@ -32,7 +32,8 @@ let pickTranslucentDepth = true;
 const INITIAL_VALUES = {
   lon: -122.69248000,
   lat: 38.57244750,
-  height: 416.00,
+  // height: 416.00,
+  height: 0.00,
   rotationX: -0.554940,
   rotationY: 0.252155,
   rotationZ: -0.559569,
@@ -56,16 +57,14 @@ async function loadPepperWoodScene() {
 
   // PepperWood Preserve, California coordinates
   // Lat: 38.5701, Lon: -122.6895
-  viewer.flyTo(INITIAL_VALUES.lon, INITIAL_VALUES.lat-0.00935, 2250, 0, -60, 2);
+  viewer.flyTo(INITIAL_VALUES.lon, INITIAL_VALUES.lat-0.00935, 9000, 0, -60, 2);
 
   splatLayer = new GaussianSplatLayer(
+    "./splats/myscene/PepperWoodPostRealityScannedClean_compressed_filtered_small.ply",
     // "./splats/myscene/PepperWoodPreFireRealityScanClean.ply",
-    // "./splats/myscene/PepperWoodPreFireRealityScanClean_binary.ply", //BAD
-    // "./splats/myscene/PepperWoodPostFireRealityScannedClean_binary.ply",
+    // "./splats/myscene/PepperWoodPostRealityScannedClean_compressed_filtered.ply",
     // "./splats/myscene/PepperWoodPostFireRealityScannedClean_binary.ply",
     // "./splats/myscene/PepperWoodPostRealityScannedClean.ply",
-    "./splats/myscene/PepperWoodPostRealityScannedClean_compressed_pdal.ply",
-    // "./splats/myscene/PepperWoodPostRealityScannedClean_compressed_splat_transform_gt05.ply",
     { lon: INITIAL_VALUES.lon, lat: INITIAL_VALUES.lat, height: INITIAL_VALUES.height },
     { x: INITIAL_VALUES.rotationX, y: INITIAL_VALUES.rotationY, z: INITIAL_VALUES.rotationZ },
     INITIAL_VALUES.scale,
@@ -211,7 +210,7 @@ function createNavControls(): void {
     .nav-controls {
       position: absolute;
       top: 12px;
-      left: 12px;
+      left: 50%;
       display: grid;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: auto auto;
